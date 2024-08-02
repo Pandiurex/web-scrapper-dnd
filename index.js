@@ -14,46 +14,69 @@ const delay = (time) => new Promise(resolve => setTimeout(resolve, time));
   await page.setDefaultNavigationTimeout(60000);
   await page.setDefaultTimeout(60000);
 
-  await page.goto("https://www.aidedd.org/dnd-filters/spells-5e.php", {
+  let i = 1;
+  const finalData = [];
+  while(i<14){
+
+  
+  await page.goto(`https://nivel20.com/games/el-resurgir-del-dragon/spells?page=${i}`, {
     waitUntil: "domcontentloaded",
   });
 
-  await page.waitForSelector('input[type="checkbox"]');
+  // await page.waitForSelector('table', {  timeout: 10000, visible: true });
 
+  await delay(3000);
 
-  const checkboxes = await page.$$('input[type="checkbox"]');
+  const data = await page.evaluate(() => {
+    const list = document.querySelector('.resizable-row');
 
-
-  for (const checkbox of checkboxes) {
-    const isChecked = await page.evaluate(el => el.checked, checkbox);
-    if (!isChecked) {
-      await page.evaluate(el => el.click(), checkbox);
-    }
-  }
-  await delay(5000);
-
-  await page.waitForSelector('table', {  timeout: 10000, visible: true });
-
-  const tableData = await page.evaluate(() => {
-    const table = document.querySelector('table');
-    const rows = table.querySelectorAll('tr');
+    const rows = list.querySelectorAll('a');
     const data = [];
 
     rows.forEach(row => {
-      const cells = row.querySelectorAll('td, th');
+      const cells = row.querySelectorAll('.spell-row-content');
       const rowData = [];
-      cells.forEach(cell => rowData.push(cell.innerText.trim()));
+      cells.forEach(cell => {
+        var textarea = cell.innerText.replace(/(\r\n|\n|\r)/gm, "|")
+        rowData.push(textarea)
+      
+      }
+      );
       data.push(rowData);
-    });
 
-    return data;
-  });
+    })
+    return data
+  })
 
-  const csvContent = tableData.map(row => row.join('|')).join('\n');
+finalData.push(data);
+  // const tableData = await page.evaluate(() => {
+  //   const table = document.querySelector('#tablepress-listaconjuros');
+  //   const rows = table.querySelectorAll('tbody');
+  //   const data = [];
 
-  fs.writeFileSync('tableData.csv', csvContent);
+  //   console.log(table)
+  //   console.log(rows)
+  //   rows.forEach(row => {
+  //     const cells = row.querySelectorAll('tr');
+  //     const rowData = [];
+  //     cells.forEach(cell => rowData.push(cell.innerText.trim()));
+  //     data.push(rowData);
+  //   });
 
-  console.log('Datos guardados en tableData.csv');
+  //   return data;
+  // });
+
+  
+
+  i++;
+}
+
+const csvContent = finalData.map(row => row.join('<<')).join('\n');
+const fileName = 'Spells_Nivel20_resurgir_dragon.csv'
+
+  fs.writeFileSync(fileName, csvContent);
+
+  console.log(`Datos guardados en ${fileName}`);
 
   await browser.close();
 })();
